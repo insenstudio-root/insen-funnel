@@ -2,7 +2,7 @@
  * POST /api/leads (PRD §4.3) — server-side, service role, JAMAIS d'insert client.
  *
  * Reçoit les soumissions du FORMULAIRE DE CONTACT de la vitrine (cross-origin,
- * insen-studio.com → go.insen-studio.com) ET du formulaire /projet (aiguillage
+ * insenstudio.com → go.insenstudio.com) ET du formulaire /projet (aiguillage
  * par forme du payload, voir `classifyPayload`).
  * Flux : parse (JSON fetch ou form urlencoded) → honeypot → aiguillage projet/contact →
  *   e-mail Resend à contact@insenstudio.com (canal GARANTI)
@@ -20,7 +20,7 @@ export const runtime = "nodejs"; // le SDK Resend n'est pas compatible edge
 
 const ALLOWED_ORIGINS = (
   process.env.ALLOWED_ORIGINS ||
-  "https://insen-studio.com,https://www.insen-studio.com,https://insenstudio.com,https://www.insenstudio.com"
+  "https://insenstudio.com,https://www.insenstudio.com"
 )
   .split(",")
   .map((s) => s.trim())
@@ -183,6 +183,6 @@ export async function POST(req: NextRequest) {
 }
 
 function redirectMerci(cors: Record<string, string>) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://go.insen-studio.com";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://go.insenstudio.com";
   return NextResponse.redirect(`${base}/merci?src=form`, { status: 303, headers: cors });
 }
