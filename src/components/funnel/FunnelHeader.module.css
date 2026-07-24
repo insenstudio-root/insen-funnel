@@ -1,0 +1,19 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 24px 0;
+}
+.logo { display: flex; align-items: center; text-decoration: none; }
+.logoImg { height: 30px; display: block; }
+.close {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-ink); text-decoration: none;
+  font-size: 18px; line-height: 1;
+  transition: opacity 160ms var(--ease);
+}
+.close:hover { opacity: 0.6; }
