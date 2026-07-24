@@ -1,0 +1,19 @@
+.page { min-height: 100vh; display: flex; flex-direction: column; }
+.main {
+  width: 100%; max-width: 960px; margin: 0 auto;
+  padding: 40px 24px 88px;
+}
+.eyebrow {
+  display: flex; align-items: center; gap: 8px;
+  font: 500 10.5px/1 var(--font-sans); letter-spacing: 0.08em;
+  color: var(--color-graphite); margin: 0 0 20px;
+}
+.dot { width: 7px; height: 7px; background: var(--color-cobalt); display: inline-block; }
+.title {
+  font: 500 clamp(36px, 5vw, 52px)/1.05 var(--font-serif);
+  letter-spacing: -0.02em; color: var(--color-ink); margin: 0; max-width: 460px;
+}
+.intro {
+  font: 400 16px/1.6 var(--font-sans); color: var(--color-ink-2);
+  margin: 16px 0 36px; max-width: 460px;
+}
