@@ -1,16 +1,32 @@
-/* Tokens design system INSEN (PRD §5.3 · cf. 03-design/design-system/tokens.md) */
+/* Tokens design system INSEN — funnel (repris de la maquette V2 / _ds tokens). */
 :root {
-  --insen-blue: #2563eb; /* accent — 1 à 3 éléments par écran max */
-  /* TODO: fonds neutres, encre (noir chaud), échelle typo (Fraunces titres / Inter corps via next/font), espacements */
+  --color-paper: #FBFAF7;
+  --color-ink: #131312;
+  --color-ink-2: #46443F;
+  --color-ink-hover: #000000;
+  --color-graphite: #5E5C57;
+  --color-cobalt: #1345B1;
+  --color-line: #E5E2DA;
+  --color-line-2: #C9C5BC;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-instrument), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* TODO: @tailwind base; @tailwind components; @tailwind utilities; une fois Tailwind configuré */
+* { box-sizing: border-box; }
 
-* {
-  box-sizing: border-box;
-}
+html, body { margin: 0; padding: 0; }
+
 body {
-  margin: 0;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #111;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--color-cobalt);
+  outline-offset: 2px;
 }
