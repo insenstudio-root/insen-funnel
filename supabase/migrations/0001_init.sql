@@ -14,10 +14,10 @@ create table leads (
   phone text,                          -- format libre, indicatif +213 suggéré à l'UI
   company text,
   -- qualification (formulaire /projet)
-  sector text check (sector in ('tourisme_hospitalite','sante_bienetre_formation','nouveaux_concepts','autre')),
+  sector text check (sector in ('hotellerie','restauration','sante','commerce','marques','autre')),
   project_summary text,                -- "le projet en une phrase"
-  maturity text check (maturity in ('explore','cahier_des_charges','compare')),
-  timeline text check (timeline in ('moins_1_mois','1_3_mois','pas_presse')),
+  maturity text check (maturity in ('idee','defini','reprendre')),
+  timeline text check (timeline in ('des_que_possible','ce_trimestre','cette_annee','pas_de_date')),
   referral_source text,                -- "comment vous nous avez connus" (déclaratif)
   -- attribution (capturée automatiquement)
   utm_source text, utm_medium text, utm_campaign text, utm_content text,

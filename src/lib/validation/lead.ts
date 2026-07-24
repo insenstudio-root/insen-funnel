@@ -3,29 +3,41 @@
  * Utilisé par POST /api/leads (formulaire /projet) et pour typer les leads.
  */
 import { z } from "zod";
+import { SECTEUR_VALUES, MATURITE_VALUES, ECHEANCE_VALUES } from "@/lib/leads/enums";
 
-export const sectorEnum = [
-  "tourisme_hospitalite",
-  "sante_bienetre_formation",
-  "nouveaux_concepts",
-  "autre",
-] as const;
-export const maturityEnum = ["explore", "cahier_des_charges", "compare"] as const;
-export const timelineEnum = ["moins_1_mois", "1_3_mois", "pas_presse"] as const;
+// Rétro-compat : ces exports pointent désormais sur les valeurs maquette.
+export const sectorEnum = SECTEUR_VALUES;
+export const maturityEnum = MATURITE_VALUES;
+export const timelineEnum = ECHEANCE_VALUES;
 
-/** Payload du formulaire public /projet (5 champs qualif + 3 identité + honeypot). */
+/** Payload du formulaire public /projet (qualif maquette + consentement + attribution). */
 export const projectLeadSchema = z.object({
+  source: z.string().max(60).optional(),
+  form_id: z.string().max(60).optional(),
   full_name: z.string().min(2).max(120),
   email: z.string().email(),
   phone: z.string().max(40).optional().or(z.literal("")),
-  company: z.string().max(160).optional().or(z.literal("")),
-  sector: z.enum(sectorEnum),
-  project_summary: z.string().min(3).max(500), // "le projet en une phrase"
-  maturity: z.enum(maturityEnum),
-  timeline: z.enum(timelineEnum),
+  sector: z.enum(SECTEUR_VALUES),
+  project_summary: z.string().min(3).max(500),
+  maturity: z.enum(MATURITE_VALUES),
+  timeline: z.enum(ECHEANCE_VALUES),
   referral_source: z.string().max(200).optional().or(z.literal("")),
-  // honeypot anti-spam : doit rester vide (rejet si rempli)
-  _hp: z.string().max(0).optional(),
+  // Consentement par soumission (mention affichée sous le bouton)
+  consent: z.literal(true, { errorMap: () => ({ message: "consentement requis" }) }),
+  consent_text: z.string().max(500).optional(),
+  consent_at: z.string().max(40).optional(),
+  // Honeypot anti-spam : DOIT rester vide
+  company_website: z.string().max(0).optional().or(z.literal("")),
+  // Attribution
+  utm_source: z.string().max(200).optional(),
+  utm_medium: z.string().max(200).optional(),
+  utm_campaign: z.string().max(200).optional(),
+  utm_term: z.string().max(200).optional(),
+  utm_content: z.string().max(200).optional(),
+  landing_path: z.string().max(300).optional(),
+  page_path: z.string().max(300).optional(),
+  referrer: z.string().max(500).optional(),
+  locale: z.string().max(10).optional(),
 });
 export type ProjectLead = z.infer<typeof projectLeadSchema>;
 
