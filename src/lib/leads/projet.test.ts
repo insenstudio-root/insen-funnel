@@ -7,7 +7,8 @@ const lead: ProjectLead = {
   sector: "hotellerie", project_summary: "Réservations directes.",
   maturity: "idee", timeline: "ce_trimestre", referral_source: "Recommandation",
   consent: true, consent_text: "…", consent_at: "2026-07-24T10:00:00.000Z",
-  utm_source: "google", utm_medium: "cpc",
+  utm_source: "google", utm_medium: "cpc", utm_term: "reservation",
+  page_path: "/projet", locale: "fr",
 };
 
 describe("classifyPayload", () => {
@@ -44,5 +45,10 @@ describe("projetDbRow", () => {
     const notes = JSON.parse(row.notes as string);
     expect(notes.form).toBe("projet");
     expect(notes.consent).toBe(true);
+    expect(notes.consent_text).toBe(lead.consent_text);
+    expect(notes.consent_at).toBe(lead.consent_at);
+    expect(notes.utm_term).toBe(lead.utm_term);
+    expect(notes.page_path).toBe(lead.page_path);
+    expect(notes.locale).toBe(lead.locale);
   });
 });

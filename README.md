@@ -29,6 +29,6 @@ Next.js 14+ (App Router) · TypeScript strict · Tailwind · Supabase (Postgres 
 - Tests : Vitest (validation, attribution) + 1 E2E Playwright (`/projet → /merci → lead`).
 
 ## Déploiement
-Vercel (projet lié au repo) + env vars. Domaine `go.insen-studio.com`.
+Vercel (projet lié au repo) + env vars. Domaine `go.insenstudio.com`.
 
-> ⚠️ Les fichiers `.tsx` / `.ts` de `src/` sont des **stubs** (en-tête + TODO référençant le PRD). À implémenter dans l'ordre du Sprint 1 (cf. `PROMPT-demarrage-vscode.md`). `0001_init.sql`, `.env.example` et `package.json` sont, eux, complets.
+> `/projet`, `/merci` et `POST /api/leads` sont implémentés. Reste à faire (Sprint 2+) : `/consultation`, `POST /api/webhooks/calcom`, `/admin` + `/admin/leads/[id]`, et le middleware d'attribution first-touch (cf. TODO dans `src/lib/attribution.ts`). `0001_init.sql`, `.env.example` et `package.json` sont, eux, complets.

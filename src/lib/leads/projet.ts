@@ -4,7 +4,6 @@
  */
 import type { ProjectLead } from "@/lib/validation/lead";
 import { SECTEUR_LABELS, MATURITE_LABELS, ECHEANCE_LABELS } from "@/lib/leads/enums";
-import type { Secteur, Maturite, Echeance } from "@/lib/leads/enums";
 
 export function classifyPayload(data: Record<string, unknown>): "projet" | "contact" | "unknown" {
   if (typeof data.sector === "string" && typeof data.project_summary === "string") return "projet";
@@ -15,9 +14,9 @@ export function classifyPayload(data: Record<string, unknown>): "projet" | "cont
 export function projetEmailFields(lead: ProjectLead): Record<string, string | undefined> {
   const campagne = [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ");
   return {
-    Secteur: SECTEUR_LABELS[lead.sector as Secteur],
-    Maturité: MATURITE_LABELS[lead.maturity as Maturite],
-    Échéance: ECHEANCE_LABELS[lead.timeline as Echeance],
+    Secteur: SECTEUR_LABELS[lead.sector],
+    Maturité: MATURITE_LABELS[lead.maturity],
+    Échéance: ECHEANCE_LABELS[lead.timeline],
     Provenance: lead.referral_source || undefined,
     Page: lead.page_path || lead.landing_path || undefined,
     Campagne: campagne || undefined,
