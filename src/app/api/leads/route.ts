@@ -2,15 +2,17 @@
  * POST /api/leads (PRD §4.3) — server-side, service role, JAMAIS d'insert client.
  *
  * Reçoit les soumissions du FORMULAIRE DE CONTACT de la vitrine (cross-origin,
- * insen-studio.com → go.insen-studio.com) et, plus tard, du formulaire /projet.
- * Flux : parse (JSON fetch ou form urlencoded) → honeypot → validation Zod →
+ * insen-studio.com → go.insen-studio.com) ET du formulaire /projet (aiguillage
+ * par forme du payload, voir `classifyPayload`).
+ * Flux : parse (JSON fetch ou form urlencoded) → honeypot → aiguillage projet/contact →
  *   e-mail Resend à contact@insenstudio.com (canal GARANTI)
  *   + insert best-effort dans `leads` (si Supabase configuré).
  * Réponse : JSON {ok:true} pour fetch ; 303 → /merci pour un POST de formulaire
  *   sans JS. CORS pour l'origine vitrine.
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { contactLeadSchema } from "../../../lib/validation/lead";
+import { contactLeadSchema, projectLeadSchema } from "../../../lib/validation/lead";
+import { classifyPayload, projetEmailFields, projetDbRow } from "../../../lib/leads/projet";
 import { notifyInsen } from "../../../lib/email/notify";
 import { getAdminClient } from "../../../lib/supabase/admin";
 
@@ -66,7 +68,48 @@ export async function POST(req: NextRequest) {
       : NextResponse.json({ ok: true }, { headers: cors });
   }
 
-  // --- 3. Validation Zod (consentement RGPD obligatoire) ---
+  // --- 3. Aiguillage projet vs contact ---
+  const kind = classifyPayload(data);
+
+  if (kind === "projet") {
+    const parsed = projectLeadSchema.safeParse(data);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "validation", issues: parsed.error.flatten().fieldErrors },
+        { status: 400, headers: cors }
+      );
+    }
+    const lead = parsed.data;
+
+    const emailRes = await notifyInsen({
+      kind: "projet",
+      full_name: lead.full_name,
+      email: lead.email,
+      phone: lead.phone || undefined,
+      message: lead.project_summary,
+      fields: projetEmailFields(lead),
+    }).catch((e) => {
+      console.error("[leads] notifyInsen (projet) a levé :", e);
+      return { sent: false as const, reason: "throw" };
+    });
+
+    let dbOk = false;
+    const db = getAdminClient();
+    if (db) {
+      const { error } = await db.from("leads").insert(projetDbRow(lead));
+      if (error) console.error("[leads] insert projet a échoué :", error.message);
+      else dbOk = true;
+    }
+
+    if (!emailRes.sent && !dbOk) {
+      return NextResponse.json({ ok: false, error: "delivery" }, { status: 502, headers: cors });
+    }
+    return isFormPost && !wantsJson
+      ? redirectMerci(cors)
+      : NextResponse.json({ ok: true }, { headers: cors });
+  }
+
+  // --- 4. Validation Zod (consentement RGPD obligatoire) ---
   const parsed = contactLeadSchema.safeParse(data);
   if (!parsed.success) {
     return NextResponse.json(
@@ -76,7 +119,7 @@ export async function POST(req: NextRequest) {
   }
   const lead = parsed.data;
 
-  // --- 4. E-mail Resend (canal garanti) ---
+  // --- 5. E-mail Resend (canal garanti) ---
   const emailRes = await notifyInsen({
     kind: "contact",
     full_name: lead.full_name,
@@ -95,7 +138,7 @@ export async function POST(req: NextRequest) {
     return { sent: false as const, reason: "throw" };
   });
 
-  // --- 5. Persistance best-effort dans `leads` (si Supabase configuré) ---
+  // --- 6. Persistance best-effort dans `leads` (si Supabase configuré) ---
   let dbOk = false;
   const db = getAdminClient();
   if (db) {
@@ -128,12 +171,12 @@ export async function POST(req: NextRequest) {
     else dbOk = true;
   }
 
-  // --- 6. Si les DEUX canaux ont échoué, on signale l'échec au visiteur ---
+  // --- 7. Si les DEUX canaux ont échoué, on signale l'échec au visiteur ---
   if (!emailRes.sent && !dbOk) {
     return NextResponse.json({ ok: false, error: "delivery" }, { status: 502, headers: cors });
   }
 
-  // --- 7. Réponse ---
+  // --- 8. Réponse ---
   return isFormPost && !wantsJson
     ? redirectMerci(cors)
     : NextResponse.json({ ok: true }, { headers: cors });
@@ -141,5 +184,5 @@ export async function POST(req: NextRequest) {
 
 function redirectMerci(cors: Record<string, string>) {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://go.insen-studio.com";
-  return NextResponse.redirect(`${base}/merci?from=contact`, { status: 303, headers: cors });
+  return NextResponse.redirect(`${base}/merci?src=form`, { status: 303, headers: cors });
 }
