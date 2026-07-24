@@ -1,0 +1,32 @@
+.page { min-height: 100vh; display: flex; flex-direction: column; }
+.main { width: 100%; max-width: 720px; margin: 0 auto; padding: 56px 24px 88px; }
+.eyebrow {
+  display: flex; align-items: center; gap: 8px;
+  font: 500 10.5px/1 var(--font-sans); letter-spacing: 0.08em; color: var(--color-graphite); margin: 0;
+}
+.dot { width: 7px; height: 7px; background: var(--color-cobalt); display: inline-block; }
+.title { font: 500 clamp(52px, 8vw, 88px)/0.98 var(--font-serif); letter-spacing: -0.025em; margin: 20px 0 0; }
+.intro { font: 400 17px/1.6 var(--font-sans); color: var(--color-ink-2); margin: 20px 0 0; max-width: 480px; }
+
+.steps { list-style: none; padding: 0; margin: 36px 0 0; border-bottom: 1px solid var(--color-line); }
+.step { display: flex; gap: 14px; align-items: baseline; padding: 15px 0; border-top: 1px solid var(--color-line); }
+.num { font: 500 11px/1 var(--font-sans); color: var(--color-line-2); }
+.stepText { font: 400 15px/1.5 var(--font-sans); color: var(--color-ink); }
+
+.secondary {
+  display: inline-flex; align-items: baseline; gap: 8px; margin-top: 28px;
+  font: 500 14.5px/1 var(--font-sans); color: var(--color-ink);
+  text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 3px;
+  transition: gap 160ms var(--ease);
+}
+.secondary:hover { gap: 11px; }
+
+.primary {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 36px;
+  height: 52px; padding: 0 24px;
+  background: var(--color-ink); color: var(--color-paper);
+  font: 500 15px/1 var(--font-sans); text-decoration: none; border-radius: 2px;
+  transition: background-color 160ms var(--ease); align-self: flex-start;
+}
+.primary:hover { background: var(--color-ink-hover); }
+.primaryDot { width: 4px; height: 4px; background: var(--color-cobalt); display: inline-block; }
