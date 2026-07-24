@@ -1,0 +1,16 @@
+/* Tokens design system INSEN (PRD §5.3 · cf. 03-design/design-system/tokens.md) */
+:root {
+  --insen-blue: #2563eb; /* accent — 1 à 3 éléments par écran max */
+  /* TODO: fonds neutres, encre (noir chaud), échelle typo (Fraunces titres / Inter corps via next/font), espacements */
+}
+
+/* TODO: @tailwind base; @tailwind components; @tailwind utilities; une fois Tailwind configuré */
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #111;
+}
