@@ -20,8 +20,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${fraunces.variable} ${instrument.variable}`}>
       <body>
-        {children}
+        {/* Avant {children} : le shim gtag doit être défini le plus tôt possible
+            dans le parsing, pour qu'aucun événement envoyé à l'hydratation ne
+            parte dans le vide. */}
         <GoogleAnalytics />
+        {children}
       </body>
     </html>
   );
