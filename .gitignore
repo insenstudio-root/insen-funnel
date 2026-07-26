@@ -5,6 +5,7 @@ build/
 .env
 .env.*
 !.env.example
+.gh-token
 *.tsbuildinfo
 coverage/
 playwright-report/
