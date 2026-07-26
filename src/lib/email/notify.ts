@@ -15,7 +15,7 @@
 import { Resend } from "resend";
 
 export type LeadNotification = {
-  kind: "contact" | "projet";
+  kind: "contact" | "projet" | "audit";
   full_name: string;
   email: string;
   phone?: string;
@@ -82,19 +82,47 @@ export async function notifyInsen(
 
   const resend = new Resend(apiKey);
   const { text, html } = buildBodies(lead);
-
-  const { data, error } = await resend.emails.send({
+  const kindLabel = lead.kind === "projet" ? "projet " : lead.kind === "audit" ? "audit " : "";
+  const msg = {
     from,
     to,
     replyTo: lead.email, // Mehdi répond → le message part vers le prospect
-    subject: `Nouveau lead — ${lead.full_name}`,
+    subject: `Nouveau lead ${kindLabel}— ${lead.full_name}`,
     text,
     html,
-  });
+  };
 
-  if (error) {
-    console.error("[notify] Resend a renvoyé une erreur :", error);
-    return { sent: false, reason: error.message || "resend_error" };
+  // Canal unique en Tier-1 : on retente une fois sur erreur transitoire, avec
+  // un timeout dur pour ne pas laisser la fonction Vercel pendre.
+  let result = await sendOnce(resend, msg);
+  if (result.error) {
+    const sig = `${result.error.statusCode ?? ""} ${result.error.name ?? ""} ${result.error.message ?? ""}`;
+    if (/timeout|network|fetch|econn|etimedout|429|rate|50\d/i.test(sig)) {
+      await new Promise((r) => setTimeout(r, 500));
+      result = await sendOnce(resend, msg);
+    }
   }
-  return { sent: true, id: data?.id };
+
+  if (result.error) {
+    console.error("[notify] Resend a échoué :", result.error);
+    return { sent: false, reason: result.error.message || "resend_error" };
+  }
+  return { sent: true, id: result.data?.id };
+}
+
+type SendResult = {
+  data?: { id?: string } | null;
+  error?: { message?: string; name?: string; statusCode?: number } | null;
+};
+
+/** Un envoi Resend borné à 8 s ; un rejet réseau/timeout est normalisé en {error}. */
+async function sendOnce(resend: Resend, msg: Parameters<Resend["emails"]["send"]>[0]): Promise<SendResult> {
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("resend_timeout")), 8000)
+    );
+    return (await Promise.race([resend.emails.send(msg), timeout])) as SendResult;
+  } catch (e) {
+    return { data: null, error: { name: "network", message: (e as Error)?.message || "network" } };
+  }
 }

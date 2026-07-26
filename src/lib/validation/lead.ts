@@ -54,6 +54,8 @@ export const contactLeadSchema = z.object({
   email: z.string().email(),
   phone: z.string().max(40).optional().or(z.literal("")),
   message: z.string().min(3).max(3000),
+  // Site / réseaux à auditer (parcours /consultation « audit_funnel ») — facultatif
+  current_site: z.string().max(300).optional().or(z.literal("")),
   // Consentement RGPD — preuve à conserver
   consent: z.literal(true, { errorMap: () => ({ message: "consentement requis" }) }),
   consent_text: z.string().max(500).optional(),

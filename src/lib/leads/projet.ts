@@ -23,6 +23,7 @@ export function projetEmailFields(lead: ProjectLead): Record<string, string | un
     Consentement: lead.consent
       ? `oui (${lead.consent_at || "date non fournie"})`
       : "non",
+    "Texte du consentement": lead.consent_text || undefined,
   };
 }
 

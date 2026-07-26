@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       );
     }
     const lead = parsed.data;
+    if (!lead.consent_at) lead.consent_at = new Date().toISOString();
 
     const emailRes = await notifyInsen({
       kind: "projet",
@@ -102,6 +103,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!emailRes.sent && !dbOk) {
+      console.error(
+        "[leads] PERTE lead projet (aucun canal) :",
+        JSON.stringify({
+          full_name: lead.full_name, email: lead.email, phone: lead.phone || null,
+          project_summary: lead.project_summary, sector: lead.sector, consent_at: lead.consent_at,
+        })
+      );
       return NextResponse.json({ ok: false, error: "delivery" }, { status: 502, headers: cors });
     }
     return isFormPost && !wantsJson
@@ -118,20 +126,27 @@ export async function POST(req: NextRequest) {
     );
   }
   const lead = parsed.data;
+  if (!lead.consent_at) lead.consent_at = new Date().toISOString();
+
+  // Le parcours /consultation « audit_funnel » emprunte ce même canal (il porte
+  // un `message`) ; on marque le type pour le tri côté boîte INSEN.
+  const notifKind = lead.source === "audit_funnel" ? "audit" : "contact";
 
   // --- 5. E-mail Resend (canal garanti) ---
   const emailRes = await notifyInsen({
-    kind: "contact",
+    kind: notifKind,
     full_name: lead.full_name,
     email: lead.email,
     phone: lead.phone || undefined,
     message: lead.message,
     fields: {
       Source: lead.source,
+      "Site / réseaux": lead.current_site || undefined,
       Page: lead.page_path || lead.landing_path,
       Campagne:
         [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || undefined,
       Consentement: lead.consent ? `oui (${lead.consent_at || "date non fournie"})` : "non",
+      "Texte du consentement": lead.consent_text || undefined,
     },
   }).catch((e) => {
     console.error("[leads] notifyInsen a levé :", e);
@@ -157,8 +172,9 @@ export async function POST(req: NextRequest) {
       referrer: lead.referrer || null,
       channel: "site",
       notes: JSON.stringify({
-        form: "contact_vitrine",
+        form: notifKind === "audit" ? "audit_funnel" : "contact_vitrine",
         source: lead.source,
+        current_site: lead.current_site || null,
         consent: lead.consent,
         consent_text: lead.consent_text,
         consent_at: lead.consent_at,
@@ -173,6 +189,13 @@ export async function POST(req: NextRequest) {
 
   // --- 7. Si les DEUX canaux ont échoué, on signale l'échec au visiteur ---
   if (!emailRes.sent && !dbOk) {
+    console.error(
+      "[leads] PERTE lead contact/audit (aucun canal) :",
+      JSON.stringify({
+        full_name: lead.full_name, email: lead.email, phone: lead.phone || null,
+        message: lead.message, source: lead.source, consent_at: lead.consent_at,
+      })
+    );
     return NextResponse.json({ ok: false, error: "delivery" }, { status: 502, headers: cors });
   }
 
