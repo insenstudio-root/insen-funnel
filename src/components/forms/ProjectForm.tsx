@@ -8,6 +8,7 @@
 import { useRef, useState } from "react";
 import { SECTEURS, MATURITES, ECHEANCES, PROVENANCES } from "@/lib/leads/enums";
 import { parseUtm } from "@/lib/attribution";
+import { gaEvent, hotelSourceFromUrl } from "@/lib/ga";
 import styles from "./ProjectForm.module.css";
 
 const CONSENT_TEXT =
@@ -29,6 +30,13 @@ export function ProjectForm() {
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState("");
   const honeypot = useRef<HTMLInputElement>(null);
+  const started = useRef(false);
+
+  function onFirstInteract() {
+    if (started.current) return;
+    started.current = true;
+    gaEvent("form_start", { form_type: "projet", hotel_source: hotelSourceFromUrl() });
+  }
 
   function validate(): Errors {
     const e: Errors = {};
@@ -50,6 +58,7 @@ export function ProjectForm() {
     setServerError("");
 
     const url = new URL(window.location.href);
+    const utm = parseUtm(url.searchParams);
     const payload = {
       source: "projet_funnel",
       full_name: fullName.trim(),
@@ -64,7 +73,7 @@ export function ProjectForm() {
       consent_text: CONSENT_TEXT,
       consent_at: new Date().toISOString(),
       company_website: honeypot.current?.value || "",
-      ...parseUtm(url.searchParams),
+      ...utm,
       landing_path: url.pathname,
       page_path: url.pathname,
       referrer: document.referrer || undefined,
@@ -78,7 +87,10 @@ export function ProjectForm() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("delivery");
-      window.location.assign("/merci?src=form");
+      const q = new URLSearchParams({ src: "form", form_type: "projet" });
+      if (utm.utm_content) q.set("hotel", utm.utm_content);
+      if (utm.utm_campaign) q.set("camp", utm.utm_campaign);
+      window.location.assign("/merci?" + q.toString());
     } catch {
       setSending(false);
       setServerError("Envoi impossible pour le moment. Réessayez ou écrivez à contact@insenstudio.com.");
@@ -86,7 +98,7 @@ export function ProjectForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={onSubmit} noValidate>
+    <form className={styles.form} onSubmit={onSubmit} onFocusCapture={onFirstInteract} noValidate>
       {/* Secteur */}
       <fieldset className={styles.group}>
         <legend className={styles.legend}>Votre secteur</legend>

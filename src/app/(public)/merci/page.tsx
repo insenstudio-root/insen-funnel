@@ -4,6 +4,7 @@
  */
 import type { Metadata } from "next";
 import { FunnelHeader } from "@/components/funnel/FunnelHeader";
+import { MerciConversion } from "@/components/analytics/MerciConversion";
 import { HOME_URL, bookingHref } from "@/lib/config";
 import styles from "./merci.module.css";
 
@@ -32,13 +33,26 @@ const CONTENT = {
   },
 } as const;
 
-export default function MerciPage({ searchParams }: { searchParams: { src?: string } }) {
+export default function MerciPage({
+  searchParams,
+}: {
+  searchParams: { src?: string; form_type?: string; hotel?: string; camp?: string };
+}) {
   const variant = searchParams.src === "booking" ? "booking" : "form";
   const c = CONTENT[variant];
   const booking = bookingHref();
+  // Conversion : uniquement quand on arrive d'une soumission (form_type présent).
+  const formType = searchParams.form_type;
 
   return (
     <div className={styles.page}>
+      {formType && (
+        <MerciConversion
+          formType={formType}
+          hotelSource={searchParams.hotel || "direct"}
+          campagne={searchParams.camp || ""}
+        />
+      )}
       <FunnelHeader />
       <main className={styles.main}>
         <p className={styles.eyebrow}>

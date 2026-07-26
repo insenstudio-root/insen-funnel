@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
       Page: lead.page_path || lead.landing_path,
       Campagne:
         [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || undefined,
+      "Hôtel (utm_content)": lead.utm_content || undefined,
       Consentement: lead.consent ? `oui (${lead.consent_at || "date non fournie"})` : "non",
       "Texte du consentement": lead.consent_text || undefined,
     },

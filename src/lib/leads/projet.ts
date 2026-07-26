@@ -20,6 +20,7 @@ export function projetEmailFields(lead: ProjectLead): Record<string, string | un
     Provenance: lead.referral_source || undefined,
     Page: lead.page_path || lead.landing_path || undefined,
     Campagne: campagne || undefined,
+    "Hôtel (utm_content)": lead.utm_content || undefined,
     Consentement: lead.consent
       ? `oui (${lead.consent_at || "date non fournie"})`
       : "non",

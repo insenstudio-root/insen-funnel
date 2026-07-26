@@ -8,6 +8,7 @@
  */
 import { useRef, useState } from "react";
 import { parseUtm } from "@/lib/attribution";
+import { gaEvent, hotelSourceFromUrl } from "@/lib/ga";
 import styles from "./ProjectForm.module.css";
 
 const CONSENT_TEXT =
@@ -26,6 +27,13 @@ export function AuditForm() {
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState("");
   const honeypot = useRef<HTMLInputElement>(null);
+  const started = useRef(false);
+
+  function onFirstInteract() {
+    if (started.current) return;
+    started.current = true;
+    gaEvent("form_start", { form_type: "audit", hotel_source: hotelSourceFromUrl() });
+  }
 
   function validate(): Errors {
     const e: Errors = {};
@@ -44,6 +52,7 @@ export function AuditForm() {
     setServerError("");
 
     const url = new URL(window.location.href);
+    const utm = parseUtm(url.searchParams);
     const payload = {
       source: "audit_funnel",
       full_name: fullName.trim(),
@@ -55,7 +64,7 @@ export function AuditForm() {
       consent_text: CONSENT_TEXT,
       consent_at: new Date().toISOString(),
       company_website: honeypot.current?.value || "",
-      ...parseUtm(url.searchParams),
+      ...utm,
       landing_path: url.pathname,
       page_path: url.pathname,
       referrer: document.referrer || undefined,
@@ -69,7 +78,10 @@ export function AuditForm() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("delivery");
-      window.location.assign("/merci?src=form");
+      const q = new URLSearchParams({ src: "form", form_type: "audit" });
+      if (utm.utm_content) q.set("hotel", utm.utm_content);
+      if (utm.utm_campaign) q.set("camp", utm.utm_campaign);
+      window.location.assign("/merci?" + q.toString());
     } catch {
       setSending(false);
       setServerError("Envoi impossible pour le moment. Réessayez ou écrivez à contact@insenstudio.com.");
@@ -77,7 +89,7 @@ export function AuditForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={onSubmit} noValidate>
+    <form className={styles.form} onSubmit={onSubmit} onFocusCapture={onFirstInteract} noValidate>
       <div className={styles.group}>
         <label htmlFor="full_name" className={styles.label}>Votre nom</label>
         <input
