@@ -97,9 +97,14 @@ export async function POST(req: NextRequest) {
     let dbOk = false;
     const db = getAdminClient();
     if (db) {
-      const { error } = await db.from("leads").insert(projetDbRow(lead));
+      const { data: row, error } = await db.from("leads").insert(projetDbRow(lead)).select("id").single();
       if (error) console.error("[leads] insert projet a échoué :", error.message);
-      else dbOk = true;
+      else {
+        dbOk = true;
+        if (row) await db.from("lead_events").insert({
+          lead_id: row.id, event_type: "form_submitted", payload: { form: "projet", source: lead.source },
+        });
+      }
     }
 
     if (!emailRes.sent && !dbOk) {
@@ -160,7 +165,7 @@ export async function POST(req: NextRequest) {
   if (db) {
     // NB : le schéma 0001_init.sql n'a pas encore de colonnes de consentement ;
     // on stocke la preuve RGPD + méta dans `notes` en attendant la migration.
-    const { error } = await db.from("leads").insert({
+    const { data: row, error } = await db.from("leads").insert({
       full_name: lead.full_name,
       email: lead.email,
       phone: lead.phone || null,
@@ -183,9 +188,16 @@ export async function POST(req: NextRequest) {
         page_path: lead.page_path,
         locale: lead.locale,
       }),
-    });
+    }).select("id").single();
     if (error) console.error("[leads] insert Supabase a échoué :", error.message);
-    else dbOk = true;
+    else {
+      dbOk = true;
+      if (row) await db.from("lead_events").insert({
+        lead_id: row.id,
+        event_type: "form_submitted",
+        payload: { form: notifKind === "audit" ? "audit_funnel" : "contact_vitrine", source: lead.source },
+      });
+    }
   }
 
   // --- 7. Si les DEUX canaux ont échoué, on signale l'échec au visiteur ---
