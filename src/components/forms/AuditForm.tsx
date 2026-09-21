@@ -6,7 +6,7 @@
  * POST /api/leads (source: audit_funnel) → classé « contact » côté serveur
  * (présence de `message`), e-mail à contact@insenstudio.com → /merci?src=form.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { parseUtm } from "@/lib/attribution";
 import { gaEvent, hotelSourceFromUrl } from "@/lib/ga";
 import styles from "./ProjectForm.module.css";
@@ -27,7 +27,14 @@ export function AuditForm() {
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState("");
   const honeypot = useRef<HTMLInputElement>(null);
+  const honeypot2 = useRef<HTMLInputElement>(null);
+  const renderedAt = useRef("");
   const started = useRef(false);
+
+  // Horodatage du montage : une soumission trop rapide trahit un automate.
+  useEffect(() => {
+    renderedAt.current = new Date().toISOString();
+  }, []);
 
   function onFirstInteract() {
     if (started.current) return;
@@ -64,6 +71,8 @@ export function AuditForm() {
       consent_text: CONSENT_TEXT,
       consent_at: new Date().toISOString(),
       company_website: honeypot.current?.value || "",
+      insen_check: honeypot2.current?.value || "",
+      form_rendered_at: renderedAt.current,
       ...utm,
       landing_path: url.pathname,
       page_path: url.pathname,
@@ -141,9 +150,12 @@ export function AuditForm() {
       </div>
 
       {/* Honeypot anti-bot — caché aux humains */}
+      {/* Leurres anti-bot — invisibles pour un humain, donc toujours vides. */}
       <div aria-hidden="true" className={styles.honeypot}>
         <label htmlFor="company_website">Ne pas remplir</label>
-        <input id="company_website" ref={honeypot} tabIndex={-1} autoComplete="off" />
+        <input id="company_website" name="company_website" ref={honeypot} tabIndex={-1} autoComplete="off" readOnly />
+        <label htmlFor="insen_check">Ne pas remplir</label>
+        <input id="insen_check" name="insen_check" ref={honeypot2} tabIndex={-1} autoComplete="off" readOnly />
       </div>
 
       {serverError && <p className={styles.serverError} role="alert">{serverError}</p>}

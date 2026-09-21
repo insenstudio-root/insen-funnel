@@ -26,8 +26,12 @@ export const projectLeadSchema = z.object({
   consent: z.literal(true, { errorMap: () => ({ message: "consentement requis" }) }),
   consent_text: z.string().max(500).optional(),
   consent_at: z.string().max(40).optional(),
-  // Honeypot anti-spam : DOIT rester vide
+  // Leurres anti-spam : DOIVENT rester vides. La décision appartient à la
+  // couche `lib/security` (elle lit le payload brut AVANT ce schéma).
   company_website: z.string().max(0).optional().or(z.literal("")),
+  insen_check: z.string().optional(),
+  // Horodatage du rendu du formulaire, posé par le client (garde de délai).
+  form_rendered_at: z.string().max(40).optional(),
   // Attribution
   utm_source: z.string().max(200).optional(),
   utm_medium: z.string().max(200).optional(),
@@ -60,8 +64,13 @@ export const contactLeadSchema = z.object({
   consent: z.literal(true, { errorMap: () => ({ message: "consentement requis" }) }),
   consent_text: z.string().max(500).optional(),
   consent_at: z.string().max(40).optional(),
-  // Honeypot anti-spam : doit rester vide (rempli = bot → drop silencieux côté route)
+  // Leurres anti-spam : doivent rester vides (remplis = bot → rejet silencieux
+  // côté route). `insen_fc_check` est celui du formulaire vitrine historique.
   company_website: z.string().max(0).optional().or(z.literal("")),
+  insen_check: z.string().optional(),
+  insen_fc_check: z.string().optional(),
+  // Horodatage du rendu du formulaire, posé par le client (garde de délai).
+  form_rendered_at: z.string().max(40).optional(),
   // Attribution (remplie côté client depuis le store first-touch)
   utm_source: z.string().max(200).optional(),
   utm_medium: z.string().max(200).optional(),

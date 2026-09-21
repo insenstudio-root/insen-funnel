@@ -4,7 +4,7 @@
  * Reçoit les soumissions du FORMULAIRE DE CONTACT de la vitrine (cross-origin,
  * insenstudio.com → go.insenstudio.com) ET du formulaire /projet (aiguillage
  * par forme du payload, voir `classifyPayload`).
- * Flux : parse (JSON fetch ou form urlencoded) → honeypot → aiguillage projet/contact →
+ * Flux : parse (JSON fetch ou form urlencoded) → couche anti-abus → aiguillage projet/contact →
  *   e-mail Resend à contact@insenstudio.com (canal GARANTI)
  *   + insert best-effort dans `leads` (si Supabase configuré).
  * Réponse : JSON {ok:true} pour fetch ; 303 → /merci pour un POST de formulaire
@@ -15,6 +15,7 @@ import { contactLeadSchema, projectLeadSchema } from "../../../lib/validation/le
 import { classifyPayload, projetEmailFields, projetDbRow } from "../../../lib/leads/projet";
 import { notifyInsen } from "../../../lib/email/notify";
 import { getAdminClient } from "../../../lib/supabase/admin";
+import { guardIntake, logIntakeDrop } from "../../../lib/security";
 
 export const runtime = "nodejs"; // le SDK Resend n'est pas compatible edge
 
@@ -61,8 +62,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400, headers: cors });
   }
 
-  // --- 2. Honeypot : champ caché rempli = bot → succès silencieux, aucun envoi ---
-  if (typeof data.company_website === "string" && data.company_website.trim() !== "") {
+  // --- 2. Couche anti-abus : origine, leurres, délai, contenu, débit ---
+  // Un rejet répond comme un succès : le bot n'apprend rien. Le journal est le
+  // seul filet de récupération d'un éventuel faux positif.
+  const asText = (v: unknown) => (typeof v === "string" ? v : undefined);
+  const decision = guardIntake(req, data, {
+    full_name: asText(data.full_name) ?? "",
+    message: asText(data.message) ?? asText(data.project_summary),
+    email: asText(data.email),
+  });
+  if (decision.action === "throttle") {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      {
+        status: 429,
+        headers: { ...cors, "Retry-After": String(Math.ceil(decision.retryAfterMs / 1000)) },
+      }
+    );
+  }
+  if (decision.action === "drop") {
+    logIntakeDrop("leads", decision, data);
     return isFormPost && !wantsJson
       ? redirectMerci(cors)
       : NextResponse.json({ ok: true }, { headers: cors });

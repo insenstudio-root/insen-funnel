@@ -8,7 +8,20 @@ const { notifyInsen } = vi.hoisted(() => ({
 vi.mock("../../../lib/email/notify", () => ({ notifyInsen }));
 vi.mock("../../../lib/supabase/admin", () => ({ getAdminClient: () => null }));
 
-import { POST } from "./route";
+type Handler = (req: NextRequest) => Promise<Response>;
+let POST: Handler;
+
+/**
+ * Le limiteur de débit est un singleton de module : on réinitialise les modules
+ * entre chaque test pour qu'aucun quota ne fuite d'un test à l'autre.
+ */
+beforeEach(async () => {
+  vi.resetModules();
+  notifyInsen.mockClear();
+  ({ POST } = (await import("./route")) as { POST: Handler });
+});
+
+const ORIGIN = "https://go.insenstudio.com";
 
 const projet = {
   full_name: "Amine K.", email: "amine@exemple.com",
@@ -16,15 +29,18 @@ const projet = {
   maturity: "idee", timeline: "ce_trimestre", consent: true,
 };
 
-function req(body: unknown) {
+const contact = {
+  source: "contact_vitrine", full_name: "Amine Kaci", email: "amine@exemple.com",
+  message: "On aimerait parler de notre site.", consent: true,
+};
+
+function req(body: unknown, headers: Record<string, string> = {}) {
   return new NextRequest("http://localhost/api/leads", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: ORIGIN, ...headers },
     body: JSON.stringify(body),
   });
 }
-
-beforeEach(() => notifyInsen.mockClear());
 
 describe("POST /api/leads — projet", () => {
   it("accepte un projet valide et envoie l'email kind:projet", async () => {
@@ -43,5 +59,61 @@ describe("POST /api/leads — projet", () => {
     const res = await POST(req({ ...projet, company_website: "http://spam" }));
     expect(res.status).toBe(200);
     expect(notifyInsen).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/leads — couche anti-abus", () => {
+  it("avale un POST direct sans Origin ni Referer", async () => {
+    const r = new NextRequest("http://localhost/api/leads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(contact),
+    });
+    const res = await POST(r);
+    expect(res.status).toBe(200);
+    expect(notifyInsen).not.toHaveBeenCalled();
+  });
+
+  it("avale un POST venu d'une origine étrangère", async () => {
+    const res = await POST(req(contact, { origin: "https://evil.example" }));
+    expect(res.status).toBe(200);
+    expect(notifyInsen).not.toHaveBeenCalled();
+  });
+
+  it("avale le second leurre insen_check", async () => {
+    const res = await POST(req({ ...contact, insen_check: "bot@spam.example" }));
+    expect(res.status).toBe(200);
+    expect(notifyInsen).not.toHaveBeenCalled();
+  });
+
+  it("avale un nom en chaîne aléatoire du type observé en production", async () => {
+    const res = await POST(req({ ...contact, full_name: "fEthwyOYBgChBuJgUXHo" }));
+    expect(res.status).toBe(200);
+    expect(notifyInsen).not.toHaveBeenCalled();
+  });
+
+  it("avale une soumission remplie plus vite qu'un humain", async () => {
+    const res = await POST(req({ ...contact, form_rendered_at: new Date().toISOString() }));
+    expect(res.status).toBe(200);
+    expect(notifyInsen).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer une soumission au rythme humain", async () => {
+    const rendered = new Date(Date.now() - 40_000).toISOString();
+    const res = await POST(req({ ...contact, form_rendered_at: rendered }));
+    expect(res.status).toBe(200);
+    expect(notifyInsen).toHaveBeenCalledOnce();
+  });
+
+  it("freine la 4e soumission d'une même IP", async () => {
+    const ip = { "x-forwarded-for": "203.0.113.42" };
+    for (let i = 0; i < 3; i++) {
+      const ok = await POST(req({ ...contact, email: `client${i}@exemple.com` }, ip));
+      expect(ok.status).toBe(200);
+    }
+    const res = await POST(req({ ...contact, email: "client9@exemple.com" }, ip));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBeTruthy();
+    expect(notifyInsen).toHaveBeenCalledTimes(3);
   });
 });
